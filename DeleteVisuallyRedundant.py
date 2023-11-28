@@ -25,11 +25,6 @@ parser.add_argument(
     action="store_true",
     help="Print the names of files without actually deleting them",
 )
-args = parser.parse_args()
-
-filepath = args.filepath  # TODO why is this global???
-toRemoveDupFile = not args.retain
-toDryRun = args.dry_run
 
 
 def find_duplicates(filepath):
@@ -37,7 +32,7 @@ def find_duplicates(filepath):
     os.system('findimagedupes -R "{}" > "{}"'.format(filepath, DUPLICATES_FILE))
 
 
-def deleteAllButLargestAndOldest(filepaths, dry_run=False):
+def deleteAllButLargestAndOldest(filepaths, toDryRun=False):
     # TODO add comments!!
     maxSize = 0
     maxFilepaths = []
@@ -84,20 +79,22 @@ def deleteAllButLargestAndOldest(filepaths, dry_run=False):
             os.remove(filepath)
 
 
-# TODO def main() and if __name__ == "__main__"
-# TODO maybe make this global
-def main():
+def main(filepath, toRemoveDupFile=True, toDryRun=False):
     find_duplicates(filepath)
     with open(DUPLICATES_FILE, "r") as fp:
-        # TODO why are we enumerating??
         for line in fp:
             matches = FILENAME_REGEX.findall(line)
 
-            deleteAllButLargestAndOldest(matches)
+            deleteAllButLargestAndOldest(matches, toDryRun=toDryRun)
 
     if toRemoveDupFile:
         os.remove(DUPLICATES_FILE)
 
 
 if __name__ == "__main__":
-    main()
+    args = parser.parse_args()
+    filepath = args.filepath
+    toRemoveDupFile = not args.retain
+    toDryRun = args.dry_run
+
+    main(filepath, toRemoveDupFile=toRemoveDupFile, toDryRun=toDryRun)
