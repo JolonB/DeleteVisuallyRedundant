@@ -4,7 +4,6 @@ import argparse
 import os
 import re
 
-# TODO change everything to snake_case
 DUPLICATES_FILE = "dups.txt"
 FILENAME_REGEX = re.compile("(.+?\.(?:jpe?g|png|gif))(?:\s+|$)", flags=re.IGNORECASE)
 
@@ -32,69 +31,69 @@ def find_duplicates(filepath):
     os.system('findimagedupes -R "{}" > "{}"'.format(filepath, DUPLICATES_FILE))
 
 
-def deleteAllButLargestAndOldest(filepaths, toDryRun=False):
+def delete_all_but_original(filepaths, dry_run=False):
     # TODO add comments!!
-    maxSize = 0
-    maxFilepaths = []
-    remainingFilepaths = []
+    max_size = 0
+    max_filepaths = []
+    remaining_filepaths = []
 
     # TODO tidy all of this up
     for filepath in filepaths:
         size = os.stat(filepath).st_size
-        if size > maxSize:
-            maxSize = size
+        if size > max_size:
+            max_size = size
 
     for filepath in filepaths:
         size = os.stat(filepath).st_size
 
-        if size < maxSize:
+        if size < max_size:
             print("D:", filepath)
-            if toDryRun == False:
+            if not dry_run:
                 os.remove(filepath)
-        elif size == maxSize:
-            maxFilepaths.append(filepath)
+        elif size == max_size:
+            max_filepaths.append(filepath)
 
-    if len(maxFilepaths) > 1:
-        oldestModifiedTime = float("inf")
+    if len(max_filepaths) > 1:
+        oldest_modified_time = float("inf")
 
-        for filepath in maxFilepaths:
-            modifiedTime = os.stat(filepath).st_mtime
+        for filepath in max_filepaths:
+            modified_time = os.stat(filepath).st_mtime
 
-            if modifiedTime < oldestModifiedTime:
-                oldestModifiedTime = modifiedTime
+            if modified_time < oldest_modified_time:
+                oldest_modified_time = modified_time
 
-        for filepath in maxFilepaths:
-            modifiedTime = os.stat(filepath).st_mtime
+        for filepath in max_filepaths:
+            modified_time = os.stat(filepath).st_mtime
 
-            if modifiedTime > oldestModifiedTime:
+            if modified_time > oldest_modified_time:
                 print("D:", filepath)
-                if toDryRun == False:
+                if not dry_run:
                     os.remove(filepath)
-            elif modifiedTime == oldestModifiedTime:
-                remainingFilepaths.append(filepath)
+            elif modified_time == oldest_modified_time:
+                remaining_filepaths.append(filepath)
 
     # Remove all but one duplicate if any still exist
-    for filepath in remainingFilepaths[1:]:
-        if toDryRun == False:
+    for filepath in remaining_filepaths[1:]:
+        if not dry_run:
             os.remove(filepath)
 
 
-def main(filepath, toRemoveDupFile=True, toDryRun=False):
+def main(filepath, keep_temp_file=False, dry_run=False):
     find_duplicates(filepath)
     with open(DUPLICATES_FILE, "r") as fp:
         for line in fp:
             matches = FILENAME_REGEX.findall(line)
 
-            deleteAllButLargestAndOldest(matches, toDryRun=toDryRun)
+            delete_all_but_original(matches, dry_run=dry_run)
 
-    if toRemoveDupFile:
+    if not keep_temp_file:
         os.remove(DUPLICATES_FILE)
 
 
 if __name__ == "__main__":
     args = parser.parse_args()
     filepath = args.filepath
-    toRemoveDupFile = not args.retain
-    toDryRun = args.dry_run
+    keep_temp_file = args.retain
+    dry_run = args.dry_run
 
-    main(filepath, toRemoveDupFile=toRemoveDupFile, toDryRun=toDryRun)
+    main(filepath, keep_temp_file=keep_temp_file, dry_run=dry_run)
