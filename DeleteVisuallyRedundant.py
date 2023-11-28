@@ -4,8 +4,9 @@ import argparse
 import os
 import re
 
-dupsFile = "dups.txt"  # TODO why isn't this const?
 # TODO change everything to snake_case
+DUPLICATES_FILE = "dups.txt"
+FILENAME_REGEX = re.compile("(.+?\.(?:jpe?g|png|gif))(?:\s+|$)", flags=re.IGNORECASE)
 
 parser = argparse.ArgumentParser(
 	prog="DeleteVisuallyRedundant",
@@ -20,8 +21,9 @@ filepath = args.filename  # TODO why is this global???
 toRemoveDupFile = not args.retain
 toDryRun = args.dry_run
 
-# TODO can this be run using Python instead of system calls?
-os.system("findimagedupes -R \"{}\" > \"{}\"".format(filepath, dupsFile))
+def find_duplicates(filepath):
+	# TODO can this be run using Python instead of system calls?
+	os.system("findimagedupes -R \"{}\" > \"{}\"".format(filepath, DUPLICATES_FILE))
 
 def deleteAllButLargestAndOldest(filepaths):
 	# TODO add comments!!
@@ -71,14 +73,17 @@ def deleteAllButLargestAndOldest(filepaths):
 
 # TODO def main() and if __name__ == "__main__"
 # TODO maybe make this global
-filename_regex = re.compile("(.+?\.(?:jpe?g|png|gif))(?:\s+|$)", flags=re.IGNORECASE)
-with open(dupsFile, 'r') as fp:
-	# TODO why are we enumerating??
-	for cnt, line in enumerate(fp):
-		matches = filename_regex.findall(line)
+def main():
+	find_duplicates()
+	with open(DUPLICATES_FILE, 'r') as fp:
+		# TODO why are we enumerating??
+		for line in fp:
+			matches = FILENAME_REGEX.findall(line)
 
-		deleteAllButLargestAndOldest(matches)
+			deleteAllButLargestAndOldest(matches)
 
-if toRemoveDupFile:
-	os.remove(dupsFile)
+	if toRemoveDupFile:
+		os.remove(DUPLICATES_FILE)
 
+if __name__ == "__main__":
+	main()
