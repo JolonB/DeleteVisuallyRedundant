@@ -13,15 +13,15 @@ These are the accepted options:
 
 | Option | Description
 | ------ | ------------
-| **-p** | Mandatory. Path to the folder under which to _recusively_ scan.
 | -r     | The script creates a 'dups.txt' file as an intermediate while processing. This file holds the list of visually-similar filenames. Giving _-r_ prevents deleting this intermediate file after processing.
 | -d     | Dry run. Prints out the names of the files which would be deleted. Doesn't actually delete them.
+| -h     | Prints help message
 
 
 Dependencies
 ------------
 
-* findimagedupes
+* [findimagedupes](https://github.com/jhnc/findimagedupes) - May be available in a package manager
 
 Gotchas
 -------
