@@ -33,49 +33,43 @@ def find_duplicates(filepath):
 
 def delete_all_but_original(filepaths, dry_run=False):
     # TODO add comments!!
-    max_size = 0
-    max_filepaths = []
-    remaining_filepaths = []
+    def delete_file(filepath):
+        print("D: {}".format(filepath))
+        if not dry_run:
+            os.remove(filepath)
 
-    # TODO tidy all of this up
-    for filepath in filepaths:
-        size = os.stat(filepath).st_size
-        if size > max_size:
-            max_size = size
+    # Keep track of any files that weren't deleted
+    largest_files = []
+    remaining_files = []
 
+    # Find the size of the largest file
+    max_size = max(os.stat(filepath).st_size for filepath in filepaths)
+    # Delete any files that are smaller
     for filepath in filepaths:
         size = os.stat(filepath).st_size
 
         if size < max_size:
-            print("D:", filepath)
-            if not dry_run:
-                os.remove(filepath)
+            delete_file(filepath)
         elif size == max_size:
-            max_filepaths.append(filepath)
+            largest_files.append(filepath)
 
-    if len(max_filepaths) > 1:
-        oldest_modified_time = float("inf")
-
-        for filepath in max_filepaths:
-            modified_time = os.stat(filepath).st_mtime
-
-            if modified_time < oldest_modified_time:
-                oldest_modified_time = modified_time
-
-        for filepath in max_filepaths:
+    if len(largest_files) > 1:
+        # Get the earliest modified file
+        oldest_modified_time = min(
+            os.stat(filepath).st_mtime for filepath in largest_files
+        )
+        # Delete any files that are more recent
+        for filepath in largest_files:
             modified_time = os.stat(filepath).st_mtime
 
             if modified_time > oldest_modified_time:
-                print("D:", filepath)
-                if not dry_run:
-                    os.remove(filepath)
+                delete_file(filepath)
             elif modified_time == oldest_modified_time:
-                remaining_filepaths.append(filepath)
+                remaining_files.append(filepath)
 
-    # Remove all but one duplicate if any still exist
-    for filepath in remaining_filepaths[1:]:
-        if not dry_run:
-            os.remove(filepath)
+        # Remove all but one duplicate if any still exist
+        for filepath in remaining_files[1:]:
+            delete_file(filepath)
 
 
 def main(filepath, keep_temp_file=False, dry_run=False):
