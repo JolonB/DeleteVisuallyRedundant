@@ -3,6 +3,7 @@
 import argparse
 import os
 import re
+from typing import List
 
 DUPLICATES_FILE = "dups.txt"
 FILENAME_REGEX = re.compile("(.+?\.(?:jpe?g|png|gif))(?:\s+|$)", flags=re.IGNORECASE)
@@ -11,7 +12,10 @@ parser = argparse.ArgumentParser(
     prog="DeleteVisuallyRedundant",
     description="Delete visually similar images. Retain only the largest and oldest image.",
 )
-parser.add_argument("filepath")
+parser.add_argument(
+    "directory",
+    help="The directory containing the images"
+)
 parser.add_argument(
     "-r",
     "--retain",
@@ -26,14 +30,32 @@ parser.add_argument(
 )
 
 
-def find_duplicates(filepath):
+def find_duplicates(directory:str):
+    """Find duplicate files from within the provided directory using findimagedupes.
+
+    Args:
+        directory (str): The directory to search within.
+    """
     # TODO can this be run using Python instead of system calls?
-    os.system('findimagedupes -R "{}" > "{}"'.format(filepath, DUPLICATES_FILE))
+    os.system('findimagedupes -R "{}" > "{}"'.format(directory, DUPLICATES_FILE))
 
 
-def delete_all_but_original(filepaths, dry_run=False):
+def delete_all_but_original(filepaths:List, dry_run:bool=False):
+    """From a list of files, delete any files that are not the largest.
+    If any files remain, delete any that are not the oldest.
+    If any files still remain, delete all but one of them.
+
+    Args:
+        filepaths (List): A list of paths to the files.
+        dry_run (bool, optional): Only print filenames without deleting. Defaults to False.
+    """
     # TODO add comments!!
-    def delete_file(filepath):
+    def delete_file(filepath:str):
+        """Print the name of the given file and delete it if dry_run is False.
+
+        Args:
+            filepath (str): The path to the file.
+        """
         print("D: {}".format(filepath))
         if not dry_run:
             os.remove(filepath)
@@ -72,8 +94,8 @@ def delete_all_but_original(filepaths, dry_run=False):
             delete_file(filepath)
 
 
-def main(filepath, keep_temp_file=False, dry_run=False):
-    find_duplicates(filepath)
+def main(directory:str, keep_temp_file:bool=False, dry_run:bool=False):
+    find_duplicates(directory)
     with open(DUPLICATES_FILE, "r") as fp:
         for line in fp:
             matches = FILENAME_REGEX.findall(line)
@@ -86,8 +108,8 @@ def main(filepath, keep_temp_file=False, dry_run=False):
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    filepath = args.filepath
+    directory = args.directory
     keep_temp_file = args.retain
     dry_run = args.dry_run
 
-    main(filepath, keep_temp_file=keep_temp_file, dry_run=dry_run)
+    main(directory, keep_temp_file=keep_temp_file, dry_run=dry_run)
