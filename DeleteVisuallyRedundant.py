@@ -49,7 +49,6 @@ def delete_all_but_original(filepaths:List, dry_run:bool=False):
         filepaths (List): A list of paths to the files.
         dry_run (bool, optional): Only print filenames without deleting. Defaults to False.
     """
-    # TODO add comments!!
     def delete_file(filepath:str):
         """Print the name of the given file and delete it if dry_run is False.
 
@@ -95,6 +94,13 @@ def delete_all_but_original(filepaths:List, dry_run:bool=False):
 
 
 def main(directory:str, keep_temp_file:bool=False, dry_run:bool=False):
+    """Find all duplicate files in the provided directory. Delete any duplicate files.
+
+    Args:
+        directory (str): The directory to look within.
+        keep_temp_file (bool, optional): Keep the temporary file generated when finding duplicates. Defaults to False.
+        dry_run (bool, optional): Don't delete any files. Only report files that would be deleted. Defaults to False.
+    """
     find_duplicates(directory)
     with open(DUPLICATES_FILE, "r") as fp:
         for line in fp:
