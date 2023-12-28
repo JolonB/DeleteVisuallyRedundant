@@ -10,7 +10,7 @@ try:
     from pyfindimagedupes import pyfindimagedupes
 
     USE_PYTHON = True
-except ModuleNotFoundError:
+except (ModuleNotFoundError, ImportError):
     USE_PYTHON = False
 
 DUPLICATES_FILE = "dups.txt"
