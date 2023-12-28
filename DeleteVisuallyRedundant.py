@@ -8,6 +8,7 @@ from typing import List
 
 try:
     from pyfindimagedupes import pyfindimagedupes
+
     USE_PYTHON = True
 except ModuleNotFoundError:
     USE_PYTHON = False
@@ -19,10 +20,7 @@ parser = argparse.ArgumentParser(
     prog="DeleteVisuallyRedundant",
     description="Delete visually similar images. Retain only the largest and oldest image.",
 )
-parser.add_argument(
-    "directory",
-    help="The directory containing the images"
-)
+parser.add_argument("directory", help="The directory containing the images")
 parser.add_argument(
     "-r",
     "--retain",
@@ -37,7 +35,24 @@ parser.add_argument(
 )
 
 
-def find_duplicates(directory:str):
+def find_duplicates_python(directory: str):
+    paths = [os.path.join(directory, file) for file in os.listdir(directory)]
+
+    stdout = sys.stdout
+    try:  # Redirect the output to the duplicates file
+        with open(DUPLICATES_FILE, "w") as sys.stdout:
+            dup_files = pyfindimagedupes.main(
+                [""] + paths
+            )  # use '' because script name is expected for argv[0]
+    finally:
+        sys.stdout = stdout
+
+
+def find_duplicates_shell(directory: str):
+    os.system('findimagedupes -R "{}" > "{}"'.format(directory, DUPLICATES_FILE))
+
+
+def find_duplicates(directory: str):
     """Find duplicate files recursively from within the provided directory using findimagedupes.
 
     Args:
@@ -45,19 +60,12 @@ def find_duplicates(directory:str):
     """
     # TODO can this be run using Python instead of system calls?
     if USE_PYTHON:
-        paths = [os.path.join(directory, file) for file in os.listdir(directory)]
-
-        stdout = sys.stdout
-        try:  # Redirect the output to the duplicates file
-            with open(DUPLICATES_FILE, "w") as sys.stdout:
-                dup_files = pyfindimagedupes.main([''] + paths)  # use '' because script name is expected for argv[0]
-        finally:
-            sys.stdout = stdout
+        find_duplicates_python(directory)
     else:
-        os.system('findimagedupes -R "{}" > "{}"'.format(directory, DUPLICATES_FILE))
+        find_duplicates_shell(directory)
 
 
-def delete_all_but_original(filepaths:List, dry_run:bool=False):
+def delete_all_but_original(filepaths: List, dry_run: bool = False):
     """From a list of files, delete any files that are not the largest.
     If any files remain, delete any that are not the oldest.
     If any files still remain, delete all but one of them.
@@ -66,7 +74,8 @@ def delete_all_but_original(filepaths:List, dry_run:bool=False):
         filepaths (List): A list of paths to the files.
         dry_run (bool, optional): Only print filenames without deleting. Defaults to False.
     """
-    def delete_file(filepath:str):
+
+    def delete_file(filepath: str):
         """Print the name of the given file and delete it if dry_run is False.
 
         Args:
@@ -110,7 +119,7 @@ def delete_all_but_original(filepaths:List, dry_run:bool=False):
             delete_file(filepath)
 
 
-def main(directory:str, keep_temp_file:bool=False, dry_run:bool=False):
+def main(directory: str, keep_temp_file: bool = False, dry_run: bool = False):
     """Find all duplicate files in the provided directory. Delete any duplicate files.
 
     Args:
