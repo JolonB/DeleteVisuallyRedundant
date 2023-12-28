@@ -3,7 +3,14 @@
 import argparse
 import os
 import re
+import sys
 from typing import List
+
+try:
+    from pyfindimagedupes import pyfindimagedupes
+    USE_PYTHON = True
+except ModuleNotFoundError:
+    USE_PYTHON = False
 
 DUPLICATES_FILE = "dups.txt"
 FILENAME_REGEX = re.compile("(.+?\.(?:jpe?g|png|gif))(?:\s+|$)", flags=re.IGNORECASE)
@@ -31,13 +38,23 @@ parser.add_argument(
 
 
 def find_duplicates(directory:str):
-    """Find duplicate files from within the provided directory using findimagedupes.
+    """Find duplicate files recursively from within the provided directory using findimagedupes.
 
     Args:
         directory (str): The directory to search within.
     """
     # TODO can this be run using Python instead of system calls?
-    os.system('findimagedupes -R "{}" > "{}"'.format(directory, DUPLICATES_FILE))
+    if USE_PYTHON:
+        paths = [os.path.join(directory, file) for file in os.listdir(directory)]
+
+        stdout = sys.stdout
+        try:  # Redirect the output to the duplicates file
+            with open(DUPLICATES_FILE, "w") as sys.stdout:
+                dup_files = pyfindimagedupes.main([''] + paths)  # use '' because script name is expected for argv[0]
+        finally:
+            sys.stdout = stdout
+    else:
+        os.system('findimagedupes -R "{}" > "{}"'.format(directory, DUPLICATES_FILE))
 
 
 def delete_all_but_original(filepaths:List, dry_run:bool=False):
