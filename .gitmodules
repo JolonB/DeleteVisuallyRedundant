@@ -1,0 +1,3 @@
+[submodule "py3findimagedupes"]
+	path = py3findimagedupes
+	url = https://github.com/JolonB/py3findimagedupes.git

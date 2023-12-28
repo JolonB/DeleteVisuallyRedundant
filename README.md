@@ -21,7 +21,12 @@ These are the accepted options:
 Dependencies
 ------------
 
-* [findimagedupes](https://github.com/jhnc/findimagedupes) - May be available in a package manager
+* [`findimagedupes`](https://github.com/jhnc/findimagedupes) - May be available in a package manager
+
+**or**
+
+* `py3findimagedupes` - Available through `git submodule init; git submodule update`
+  * This depends on `pgmagick`. Instructions are available in the `py3findimagedupes` README.
 
 Gotchas
 -------

@@ -3,6 +3,15 @@
 import argparse
 import os
 import re
+import sys
+from typing import List
+
+try:
+    from pyfindimagedupes import pyfindimagedupes
+
+    USE_PYTHON = True
+except (ModuleNotFoundError, ImportError):
+    USE_PYTHON = False
 
 DUPLICATES_FILE = "dups.txt"
 FILENAME_REGEX = re.compile("(.+?\.(?:jpe?g|png|gif))(?:\s+|$)", flags=re.IGNORECASE)
@@ -11,7 +20,7 @@ parser = argparse.ArgumentParser(
     prog="DeleteVisuallyRedundant",
     description="Delete visually similar images. Retain only the largest and oldest image.",
 )
-parser.add_argument("filepath")
+parser.add_argument("directory", help="The directory containing the images")
 parser.add_argument(
     "-r",
     "--retain",
@@ -26,60 +35,99 @@ parser.add_argument(
 )
 
 
-def find_duplicates(filepath):
+def find_duplicates_python(directory: str):
+    paths = [os.path.join(directory, file) for file in os.listdir(directory)]
+
+    stdout = sys.stdout
+    try:  # Redirect the output to the duplicates file
+        with open(DUPLICATES_FILE, "w") as sys.stdout:
+            dup_files = pyfindimagedupes.main(
+                [""] + paths
+            )  # use '' because script name is expected for argv[0]
+    finally:
+        sys.stdout = stdout
+
+
+def find_duplicates_shell(directory: str):
+    os.system('findimagedupes -R "{}" > "{}"'.format(directory, DUPLICATES_FILE))
+
+
+def find_duplicates(directory: str):
+    """Find duplicate files recursively from within the provided directory using findimagedupes.
+
+    Args:
+        directory (str): The directory to search within.
+    """
     # TODO can this be run using Python instead of system calls?
-    os.system('findimagedupes -R "{}" > "{}"'.format(filepath, DUPLICATES_FILE))
+    if USE_PYTHON:
+        find_duplicates_python(directory)
+    else:
+        find_duplicates_shell(directory)
 
 
-def delete_all_but_original(filepaths, dry_run=False):
-    # TODO add comments!!
-    max_size = 0
-    max_filepaths = []
-    remaining_filepaths = []
+def delete_all_but_original(filepaths: List, dry_run: bool = False):
+    """From a list of files, delete any files that are not the largest.
+    If any files remain, delete any that are not the oldest.
+    If any files still remain, delete all but one of them.
 
-    # TODO tidy all of this up
-    for filepath in filepaths:
-        size = os.stat(filepath).st_size
-        if size > max_size:
-            max_size = size
+    Args:
+        filepaths (List): A list of paths to the files.
+        dry_run (bool, optional): Only print filenames without deleting. Defaults to False.
+    """
 
+    def delete_file(filepath: str):
+        """Print the name of the given file and delete it if dry_run is False.
+
+        Args:
+            filepath (str): The path to the file.
+        """
+        print("D: {}".format(filepath))
+        if not dry_run:
+            os.remove(filepath)
+
+    # Keep track of any files that weren't deleted
+    largest_files = []
+    remaining_files = []
+
+    # Find the size of the largest file
+    max_size = max(os.stat(filepath).st_size for filepath in filepaths)
+    # Delete any files that are smaller
     for filepath in filepaths:
         size = os.stat(filepath).st_size
 
         if size < max_size:
-            print("D:", filepath)
-            if not dry_run:
-                os.remove(filepath)
+            delete_file(filepath)
         elif size == max_size:
-            max_filepaths.append(filepath)
+            largest_files.append(filepath)
 
-    if len(max_filepaths) > 1:
-        oldest_modified_time = float("inf")
-
-        for filepath in max_filepaths:
-            modified_time = os.stat(filepath).st_mtime
-
-            if modified_time < oldest_modified_time:
-                oldest_modified_time = modified_time
-
-        for filepath in max_filepaths:
+    if len(largest_files) > 1:
+        # Get the earliest modified file
+        oldest_modified_time = min(
+            os.stat(filepath).st_mtime for filepath in largest_files
+        )
+        # Delete any files that are more recent
+        for filepath in largest_files:
             modified_time = os.stat(filepath).st_mtime
 
             if modified_time > oldest_modified_time:
-                print("D:", filepath)
-                if not dry_run:
-                    os.remove(filepath)
+                delete_file(filepath)
             elif modified_time == oldest_modified_time:
-                remaining_filepaths.append(filepath)
+                remaining_files.append(filepath)
 
-    # Remove all but one duplicate if any still exist
-    for filepath in remaining_filepaths[1:]:
-        if not dry_run:
-            os.remove(filepath)
+        # Remove all but one duplicate if any still exist
+        for filepath in remaining_files[1:]:
+            delete_file(filepath)
 
 
-def main(filepath, keep_temp_file=False, dry_run=False):
-    find_duplicates(filepath)
+def main(directory: str, keep_temp_file: bool = False, dry_run: bool = False):
+    """Find all duplicate files in the provided directory. Delete any duplicate files.
+
+    Args:
+        directory (str): The directory to look within.
+        keep_temp_file (bool, optional): Keep the temporary file generated when finding duplicates. Defaults to False.
+        dry_run (bool, optional): Don't delete any files. Only report files that would be deleted. Defaults to False.
+    """
+    find_duplicates(directory)
     with open(DUPLICATES_FILE, "r") as fp:
         for line in fp:
             matches = FILENAME_REGEX.findall(line)
@@ -92,8 +140,8 @@ def main(filepath, keep_temp_file=False, dry_run=False):
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    filepath = args.filepath
+    directory = args.directory
     keep_temp_file = args.retain
     dry_run = args.dry_run
 
-    main(filepath, keep_temp_file=keep_temp_file, dry_run=dry_run)
+    main(directory, keep_temp_file=keep_temp_file, dry_run=dry_run)
